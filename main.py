@@ -31,28 +31,12 @@ CLASS_NAMES = ["Early Blight", "Late Blight", "Healthy"]
 async def ping():
     return "Hello, I am alive"
 
-def read_file_as_image1(data) -> np.ndarray:
-    image = np.array(Image.open(BytesIO(data)))
-    return image
-def read_file_as_image(data) -> np.ndarray:
-    """Load image exactly like during training."""
-    image = (
-        Image.open(BytesIO(data))
-        .convert("RGB")          # 3 channels
-        .resize((256, 256))      # make shape match the model
-    )
-    image = np.asarray(image, dtype=np.float32) / 255.0  # 0‑1 range
-    return image
-
-
-
 @app.post("/predict")
 async def predict(
         file: UploadFile = File(...)
 ):
     contents = await file.read()  # Read once
 
-    # For autoencoder (normalize + resize)
     image_auto = (
         Image.open(BytesIO(contents))
         .convert("RGB")
@@ -61,11 +45,9 @@ async def predict(
     image_auto = np.asarray(image_auto, dtype=np.float32) / 255.0
     img_batch_auto = np.expand_dims(image_auto, 0)
 
-    # For classifier (resize only if that's what you did during training)
     image_clf = Image.open(BytesIO(contents))
     img_batch_clf = np.expand_dims(image_clf, 0)
-
-    # Step 1: Autoencoder anomaly detection
+    
     reconstructed = model.predict(img_batch_auto)
     reconstruction_error = np.mean((img_batch_auto - reconstructed) ** 2)
 
